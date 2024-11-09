@@ -1,0 +1,5 @@
+.idea/
+venv_tg_bot/
+credentials.py
+main.py
+*.pyc
