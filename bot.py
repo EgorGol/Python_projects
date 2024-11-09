@@ -31,7 +31,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'random': 'Узнать случайный интересный факт 🧠',
         'gpt': 'Задать вопрос чату GPT 🤖',
         'talk': 'Поговорить с известной личностью 👤',
-        'quiz': 'Поучаствовать в квизе ❓'
+        'quiz': 'Поучаствовать в квизе ❓',
+        'eng': 'Расширить словарный запас английского языка 🇬🇧'
         # Добавить команду в меню можно так:
         # 'command': 'button text'
     })
@@ -52,6 +53,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await talk(update, context)
     elif dialog.mode == 'quiz':
         await quiz(update, context)
+    elif dialog.mode == 'eng':
+        await eng(update, context)
     else:
         await start(update, context)
 
@@ -73,6 +76,21 @@ async def random_fact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     gpt_reply = await chat_gpt.send_question(prompt, '')
     await message.edit_text(gpt_reply)
 
+    # создаем кнопку для продолжения
+    button = {'next_fact' : 'Следующий факт'}
+    await send_text_buttons(update, context, 'Хотите узнать что-нибудь еще?', button)
+
+async def random_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Функция для обработки кнопки генерации нового акта в режиме random
+    :param update:
+    :param context:
+    :return:
+    """
+    await update.callback_query.answer()
+    update.callback_query.data
+    await random_fact(update, context)
+
 
 async def gpt_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -85,7 +103,6 @@ async def gpt_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = load_message('gpt')
     await send_image(update, context, 'gpt')
     await send_text(update, context, message)
-
 
 async def gpt_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text  # принимает сообщение пользователя
@@ -127,7 +144,6 @@ async def talk_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = 'Контакст с личностью установлен. Напиши что-нибудь, чтобы начать диалог'
     await send_text(update, context, message)  # отсылает ответ GPT в чат
 
-
 async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Функция для общения пользователя с чатом GPT в режиме talk (после выбора собеседника)
@@ -139,6 +155,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prompt = load_prompt('gpt')  # подсказка для чата GPT
     gpt_reply = await chat_gpt.add_message(user_text)
     await send_text(update, context, gpt_reply)  # отсылает ответ GPT в чат
+
 
 async def quiz_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -157,7 +174,6 @@ async def quiz_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     await send_image(update, context, 'quiz')
     await send_text_buttons(update, context, message, topics)
-
 
 async def quiz_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -191,6 +207,34 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, context, f'Количество правильных ответов - {dialog.right_answers}')
     await send_text_buttons(update, context, one_more_question, {'quiz_more':'Давай следующий вопрос'})
 
+
+async def eng_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Функция для обработки команды /eng
+    :param update:
+    :param context:
+    :return: None
+    """
+    dialog.mode = 'eng'
+    message = load_message('eng')
+    await send_image(update, context, 'eng')
+    await send_text(update, context, message)
+
+async def eng(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Функция для тренировки словарного запаса в английском языке
+    :param update:
+    :param context:
+    :return:
+    """
+    user_word = update.message.text  # принимает сообщение пользователя
+    prompt = load_prompt('eng')
+    message = f'Дай мне определение и 3 синонима на английском языке для этого слова {user_word}'
+    one_more_word = 'Для продолжения введите следующее слово'
+    gpt_reply = await chat_gpt.send_question(prompt, message)
+    await send_text(update, context, gpt_reply)  # отсылает ответ GPT в чат
+    await send_text(update, context, one_more_word) # приглашение продолжить тренировку
+
 # вывод меню с основными командами
 app.add_handler(CommandHandler('start', start))
 
@@ -199,6 +243,9 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
 
 # ЗАДАЧА 2. Создание обработчика команды /random, для генерации рандомных фактов
 app.add_handler(CommandHandler('random', random_fact))
+
+# Задача 2. Обработчик кнопок для режима /random
+app.add_handler(CallbackQueryHandler(random_button, pattern='next_fact'))
 
 # ЗАДАЧА 3. Создание обработчика команды /gpt, для общения с chat GPT
 app.add_handler(CommandHandler('gpt', gpt_mode))
@@ -214,6 +261,10 @@ app.add_handler(CommandHandler('quiz', quiz_mode))
 
 # Задача 5. Обработчик кнопок для режима quiz
 app.add_handler(CallbackQueryHandler(quiz_buttons, pattern='^quiz_.*'))
+
+# ЗАДАЧА 6. Создание обработчика команды /eng, для тренировки английского языка
+app.add_handler(CommandHandler('eng', eng_mode))
+
 '''
 каманда add_handler добавляет новый обработчик:
 MessageHandler - обрабатывает все текстовые сообщения, которые приходят в бот.
